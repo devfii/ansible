@@ -1,0 +1,20 @@
+- name: Initialize kubenetes cluster
+  hosts: master
+  remote_user: ubuntu
+  tasks:
+  - name: Initialize kubernetes control plan
+    ansible.builtin.shell: kubeadm init
+  - name: Get token list
+    ansible.builtin.shell: kubeadm token list
+    register: token_list
+- name: Join K8s cluster
+  hosts: nodes
+  remote_user: ubuntu
+  tasks:
+  - name: Run kubeadm join
+    ansible.builtin.shell: |
+      kubeadm join --token $( result | awk '{print $1}' ) {{ master }} \
+      --discovery-token-ca-cert-hash sha256:$(openssl x509 -pubkey -in \
+      /etc/kubernetes/pki/ca.crt | openssl rsa -pubin \
+      -outform der 2>/dev/null | \
+      openssl dgst -sha256 -hex | sed 's/^.* //')
